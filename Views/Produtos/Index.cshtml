@@ -1,0 +1,170 @@
+﻿@{
+    ViewData["Title"] = "Gestão de Produtos";
+}
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+
+<div class="container mt-4">
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-3">
+            <h4 class="mb-0"><i class="fas fa-boxes me-2"></i>Gestão de Produtos </h4>
+            <div>
+                <button id="btnAtualizar" class="btn btn-outline-light btn-sm me-2">
+                    <i class="fas fa-sync-alt"></i> Atualizar
+                </button>
+                <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#modalProduto">
+                    <i class="fas fa-plus"></i> Novo Produto
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle" id="gridProdutos">
+                    <thead class="table-light">
+                        <tr>
+                            <th>ID</th>
+                            <th>Nome</th>
+                            <th class="text-end">Preço</th>
+                            <th>Departamento</th>
+                            <th class="text-center">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalProduto" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-light">
+                <h5 class="modal-title">Cadastrar Novo Produto</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formProduto">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Nome do Produto</label>
+                        <input type="text" id="nome" class="form-control" placeholder="Ex: Motor V8">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Preço (R$)</label>
+                        <input type="number" step="0.01" id="preco" class="form-control" placeholder="0,00">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Departamento</label>
+                        <select id="departamentoId" class="form-select">
+                            <option value="">Selecione um departamento...</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-link text-decoration-none" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" id="btnSalvar" class="btn btn-primary px-4">Salvar no Oracle</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+    $(document).ready(function() {
+    carregarTabela();
+    carregarDepartamentos();
+
+    $('#btnAtualizar').click(carregarTabela);
+
+    $('#btnSalvar').click(function() {
+    const produto = {
+    nome: $('#nome').val(),
+    preco: parseFloat($('#preco').val()),
+    departamentoId: parseInt($('#departamentoId').val())
+    };
+
+    if (!produto.nome || isNaN(produto.preco) || !produto.departamentoId) {
+    Swal.fire('Atenção', 'Preencha todos os campos corretamente.', 'warning');
+    return;
+    }
+
+    $.ajax({
+    url: '/Produtos/Criar',
+    type: 'POST',
+    contentType: 'application/json',
+    data: JSON.stringify(produto),
+    success: function() {
+    Swal.fire('Sucesso!', 'Produto cadastrado com sucesso.', 'success');
+    $('#modalProduto').modal('hide');
+    $('#formProduto')[0].reset();
+    carregarTabela();
+    },
+    error: function() {
+    Swal.fire('Erro!', 'Erro ao salvar no banco Oracle.', 'error');
+    }
+    });
+    });
+    });
+
+    function carregarTabela() {
+    const corpoTabela = $('#gridProdutos tbody');
+    corpoTabela.html('<tr><td colspan="5" class="text-center text-muted">Consultando Oracle...</td></tr>');
+
+    $.getJSON('/Produtos/ObterTodos', function(data) {
+    corpoTabela.empty();
+    if (data.length === 0) {
+    corpoTabela.append('<tr><td colspan="5" class="text-center">Nenhum produto encontrado.</td></tr>');
+    return;
+    }
+    $.each(data, function(i, item) {
+    corpoTabela.append(`
+    <tr>
+    <td><span class="badge bg-light text-dark border">${item.id}</span></td>
+    <td><strong>${item.nome}</strong></td>
+    <td class="text-end fw-bold text-dark">${item.precoFormatado}</td>
+    <td><span class="badge bg-info text-dark">${item.departamentoNome}</span></td>
+    <td class="text-center">
+    <button class="btn btn-sm btn-outline-danger" onclick="excluirProduto(${item.id})">
+    <i class="fas fa-trash-alt"></i>
+    </button>
+    </td>
+    </tr>`);
+    });
+    });
+    }
+
+    function carregarDepartamentos() {
+    $.getJSON('/Departamentos/ObterTodos', function(data) {
+    const select = $('#departamentoId');
+    $.each(data, function(i, item) {
+    select.append(`<option value="${item.id}">${item.nome}</option>`);
+    });
+    });
+    }
+
+    function excluirProduto(id) {
+    Swal.fire({
+    title: 'Excluir produto?',
+    text: "Esta ação não pode ser desfeita no Oracle.",
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#d33',
+    cancelButtonText: 'Cancelar',
+    confirmButtonText: 'Sim, excluir!'
+    }).then((result) => {
+    if (result.isConfirmed) {
+    $.ajax({
+    url: `/Produtos/Excluir/${id}`,
+    type: 'DELETE',
+    success: function() {
+    Swal.fire('Excluído!', 'O registro foi removido.', 'success');
+    carregarTabela();
+    }
+    });
+    }
+    });
+    }
+</script>
