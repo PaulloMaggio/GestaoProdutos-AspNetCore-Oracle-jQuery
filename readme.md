@@ -2,7 +2,7 @@
 
 Sistema Full Stack desenvolvido para gerenciamento de catálogo de produtos, integrando uma arquitetura moderna no backend com uma interface dinâmica e responsiva no frontend.
 
-![Demonstração do Sistema](index.jpg)
+![Demonstração do Sistema](assets/index.jpg)
 
 ## 🚀 Tecnologias Utilizadas
 
